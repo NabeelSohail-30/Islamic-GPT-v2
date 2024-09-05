@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>User Login</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <style>
+      body {
+        background: linear-gradient(to right, #3a1c71, #d76d77, #ffaf7b);
+        height: 100vh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+
+      .login-container {
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(10px);
+        border-radius: 20px;
+        padding: 30px;
+        width: 320px;
+        box-shadow: 0px 5px 15px rgba(0, 0, 0, 0.2);
+      }
+
+      .login-container h2 {
+        text-align: center;
+        color: #fff;
+        margin-bottom: 20px;
+      }
+
+      .form-control {
+        background: transparent;
+        border: none;
+        border-bottom: 2px solid #fff;
+        border-radius: 0;
+        color: #fff;
+        font-size: 16px;
+      }
+
+      .form-control:focus {
+        box-shadow: none;
+        border-color: #ffaf7b;
+      }
+
+      .form-label {
+        color: #fff;
+        font-size: 14px;
+      }
+
+      .form-check-label {
+        color: #fff;
+      }
+
+      .btn-login {
+        width: 100%;
+        background: #ffaf7b;
+        border: none;
+        border-radius: 20px;
+        color: #3a1c71;
+        font-weight: bold;
+        transition: background 0.3s ease-in-out;
+      }
+
+      .btn-login:hover {
+        color: #ffaf7b;
+        background: #3a1c71;
+      }
+
+      .forgot-password {
+        color: #ffaf7b;
+        text-align: right;
+        display: block;
+        margin-top: 10px;
+      }
+
+      .avatar {
+        width: 80px;
+        height: 80px;
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 50%;
+        margin: 0 auto 20px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+
+      .avatar img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        border-radius: 50%;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="login-container">
+      {% load static %}
+      <div class="avatar">
+        <img src="{% static 'profile.png' %}" alt="User Avatar" />
+      </div>
+      <h2>Login</h2>
+      {% if messages %}
+      <ul>
+        {% for message in messages %}
+        <li>{{ message }}</li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+      <form method="post">
+        {% csrf_token %}
+        <div class="mb-3">
+          <label for="username" class="form-label">User:</label>
+          <input
+            type="text"
+            class="form-control"
+            id="username"
+            name="username"
+            required
+          />
+        </div>
+        <div class="mb-3">
+          <label for="password" class="form-label">Password:</label>
+          <input
+            type="password"
+            class="form-control"
+            id="password"
+            name="password"
+            required
+          />
+        </div>
+        <div class="d-flex justify-content-between"></div>
+        <button type="submit" class="btn btn-login mt-4">Login</button>
+      </form>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/js/bootstrap.bundle.min.js"></script>
+  </body>
+</html>

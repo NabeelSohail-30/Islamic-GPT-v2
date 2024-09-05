@@ -1,0 +1,55 @@
+# Python bytecode files
+*.pyc
+*.pyo
+*.pyd
+__pycache__/
+
+# Django stuff:
+*.log
+local_settings.py
+db.sqlite3
+/static/
+media/
+
+# Environment variables
+.env
+
+# VS Code settings
+.vscode/
+
+# MacOS Finder
+.DS_Store
+
+# Python virtual environment
+venv/
+ENV/
+env/
+.venv/
+.ENV/
+
+# PyCharm settings
+.idea/
+
+# Jupyter Notebook
+.ipynb_checkpoints/
+
+# Coverage reports
+.coverage
+*.cover
+*.py,cover
+.coverage.*
+cache/
+nosetests.xml
+coverage.xml
+*.h5
+
+# Pytest
+.cache
+
+# MyPy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# config file
+config.py

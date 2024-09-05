@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Add Data</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <style>
+      body {
+        padding-top: 56px;
+      }
+      .navbar {
+        background-color: #343a40;
+      }
+      .navbar-brand {
+        color: white;
+      }
+      .btn-logout {
+        color: white;
+        background-color: #dc3545;
+        border: none;
+      }
+      .btn-logout:hover {
+        background-color: #c82333;
+      }
+
+      .form-container {
+        background-color: white;
+        padding: 30px;
+        border-radius: 8px;
+        box-shadow: 0px 0px 15px rgba(0, 0, 0, 0.1);
+        margin-top: 76px;
+      }
+
+      .loading {
+        display: none;
+        font-size: 16px;
+        margin-top: 15px;
+      }
+
+      .disabled {
+        pointer-events: none;
+        opacity: 0.6;
+      }
+
+      #successMsg,
+      #errorMsg {
+        margin-top: 10px;
+      }
+
+      .spinner-border {
+        margin-left: 10px;
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
+      <div class="container">
+        <a class="navbar-brand" href="#">Islamic GPT</a>
+
+        <div class="ml-auto">
+          <form action="{% url 'chat_openai:view' %}" class="d-inline">
+            <button type="submit" class="btn btn-success mr-3">
+              Go To Chat
+            </button>
+          </form>
+
+          <form action="{% url 'home' %}" class="d-inline">
+            <button type="submit" class="btn btn-info mr-3">Home</button>
+          </form>
+
+          <form method="POST" action="{% url 'logout' %}" class="d-inline">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger">Logout</button>
+          </form>
+        </div>
+      </div>
+    </nav>
+
+    <div class="container">
+      <div class="form-container mx-auto col-md-6">
+        <h2 class="text-center mb-4">Add Data</h2>
+
+        <form id="dataForm">
+          {% csrf_token %}
+          <div class="form-group mb-4">
+            <label for="dataTextarea">Enter your data:</label>
+            <textarea
+              class="form-control"
+              id="dataTextarea"
+              name="data"
+              rows="5"
+            ></textarea>
+          </div>
+          <div class="form-group text-center d-flex justify-content-center">
+            <button type="submit" class="btn btn-primary w-50" id="submitBtn">
+              Submit
+            </button>
+          </div>
+          <div
+            class="form-group text-center d-flex justify-content-center mt-4"
+          >
+            <div
+              class="spinner-border text-primary"
+              id="loadingSpinner"
+              role="status"
+            >
+              <span class="sr-only"></span>
+            </div>
+          </div>
+        </form>
+
+        <div id="processingMsg" class="alert alert-info loading">
+          Processing, please wait...
+        </div>
+        <div
+          id="successMsg"
+          class="alert alert-success"
+          style="display: none"
+        ></div>
+        <div
+          id="errorMsg"
+          class="alert alert-danger"
+          style="display: none"
+        ></div>
+      </div>
+    </div>
+
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+    <!-- Bootstrap JS -->
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+      $(document).ready(function () {
+        $("#dataForm").on("submit", function (e) {
+          e.preventDefault();
+
+          $("#successMsg").hide();
+          $("#errorMsg").hide();
+
+          // Show loading spinner and disable form
+          $("#processingMsg").show();
+          $("#loadingSpinner").show();
+          $("#submitBtn").prop("disabled", true);
+
+          $.ajax({
+            type: "POST",
+            url: "",
+            data: $(this).serialize(),
+            success: function (response) {
+              $("#processingMsg").hide();
+              $("#loadingSpinner").hide();
+              $("#submitBtn").prop("disabled", false);
+
+              if (response.status === "success") {
+                $("#successMsg").text(response.message).show();
+              } else {
+                $("#errorMsg").text(response.message).show();
+              }
+            },
+            error: function () {
+              $("#processingMsg").hide();
+              $("#loadingSpinner").hide();
+              $("#submitBtn").prop("disabled", false);
+              $("#errorMsg").text("An unexpected error occurred.").show();
+            },
+          });
+        });
+      });
+    </script>
+  </body>
+</html>

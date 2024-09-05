@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chat Screen</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <style>
+      body {
+        padding-top: 56px;
+      }
+      .navbar {
+        background-color: #343a40;
+      }
+      .navbar-brand {
+        color: white;
+      }
+      .btn-logout {
+        color: white;
+        background-color: #dc3545;
+        border: none;
+      }
+      .btn-logout:hover {
+        background-color: #c82333;
+      }
+      #chat-container {
+        width: 100%;
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 15px;
+      }
+      #chat-messages {
+        height: 430px;
+        overflow-y: auto;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        padding: 15px;
+        margin-bottom: 15px;
+        background-color: #f9f9f9;
+      }
+      .message {
+        padding: 10px;
+        margin-bottom: 10px;
+        border-radius: 8px;
+        display: flex;
+        align-items: flex-start;
+      }
+      .message.user {
+        background-color: #d4edda;
+        justify-content: flex-end;
+        text-align: right;
+      }
+      .message.bot {
+        background-color: #e2e3e5;
+        justify-content: flex-start;
+      }
+      .message .icon {
+        width: 35px;
+        height: 35px;
+        margin-right: 10px;
+      }
+      .message.user .icon {
+        margin-right: 0;
+        margin-left: 10px;
+      }
+      .message strong {
+        display: block;
+        font-size: 0.9em;
+        font-weight: bold;
+      }
+      .message p {
+        margin: 0;
+        font-size: 1em;
+      }
+      .timestamp {
+        font-size: 0.75em;
+        color: #888;
+        margin-top: 5px;
+      }
+      #chat-form {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      #user_input {
+        flex: 1;
+      }
+      .btn-send {
+        background-color: #007bff;
+        border: none;
+        color: white;
+      }
+      .btn-send:hover {
+        background-color: #0056b3;
+      }
+      .spinner-border {
+        display: none;
+      }
+      .alert {
+        margin-top: 15px;
+      }
+    </style>
+  </head>
+  <body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
+      <div class="container">
+        <a class="navbar-brand" href="#">Islamic GPT</a>
+
+        <div class="ml-auto">
+          <form
+            action="{% url 'chat_openai:export_messages_csv' %}"
+            method="get"
+            class="d-inline"
+          >
+            <button type="submit" class="btn btn-success mr-3">
+              Export as CSV
+            </button>
+          </form>
+
+          <form action="{% url 'add_data:add_data_form' %}" class="d-inline">
+            <button type="submit" class="btn btn-primary mr-3">
+              Data Entry
+            </button>
+          </form>
+
+          <form action="{% url 'home' %}" class="d-inline">
+            <button type="submit" class="btn btn-info mr-3">Home</button>
+          </form>
+
+          <form method="POST" action="{% url 'logout' %}" class="d-inline">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger">Logout</button>
+          </form>
+        </div>
+      </div>
+    </nav>
+
+    <div id="chat-container">
+      <h3 class="text-center mb-2">Islamic GPT</h3>
+      <h5 class="text-center mb-4">
+        Chat with OpenAI on Bahar-e-Shariat Volume 01 Data in Urdu
+      </h5>
+
+      <div id="chat-messages">
+        {% load static %} {% for message in messages %}
+        <div
+          class="message {% if message.role == 'user' %}user{% else %}bot{% endif %}"
+        >
+          <div>
+            {% if message.role == 'user' %}
+            <strong>{{ request.user.username }}</strong>
+            {% else %}
+            <strong>{{message.role}}</strong>
+            {% endif %}
+            <p>{{ message.content }}</p>
+            <div class="timestamp">{{ message.timestamp }}</div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+
+      <div class="text-center d-flex justify-content-center my-2">
+        <div class="spinner-border text-primary" id="loader" role="status">
+          <span class="visually-hidden">Loading...</span>
+        </div>
+      </div>
+
+      <div
+        id="error-message"
+        class="alert alert-danger"
+        style="display: none"
+      ></div>
+
+      <form id="chat-form" method="post">
+        {% csrf_token %}
+        <input
+          type="text"
+          name="user_input"
+          id="user_input"
+          placeholder="Type your message..."
+          class="form-control"
+        />
+        <button type="submit" class="btn btn-send" id="submit_btn">Send</button>
+      </form>
+    </div>
+
+    <script
+      src="https://code.jquery.com/jquery-3.7.1.min.js"
+      integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo="
+      crossorigin="anonymous"
+    ></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.7/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/5.1.3/js/bootstrap.min.js"></script>
+
+    <script>
+      $(document).ready(function () {
+        $("#chat-messages").scrollTop($("#chat-messages")[0].scrollHeight);
+
+        function getCurrentTime() {
+          const now = new Date();
+          return now.toLocaleTimeString();
+        }
+
+        $("#chat-form").on("submit", function (e) {
+          e.preventDefault();
+          let user_input = $("#user_input").val().trim();
+          $("#user_input").val("");
+
+          $("#error-message").hide();
+          $("#user_input").prop("disabled", true);
+          $("#submit_btn").prop("disabled", true);
+          $("#loader").show();
+
+          if (user_input === "") {
+            $("#error-message").text("Error: Input cannot be empty.").show();
+            $("#user_input").prop("disabled", false);
+            $("#submit_btn").prop("disabled", false);
+            $("#loader").hide();
+            return;
+          }
+
+          $.ajax({
+            type: "POST",
+            url: "{% url 'chat_openai:chat' %}",
+            data: {
+              user_input: user_input,
+              csrfmiddlewaretoken: "{{ csrf_token }}",
+            },
+            beforeSend: function () {
+              $("#chat-messages").append(`
+                <div class="message user">
+                    <div>
+                        <strong>{{ request.user.username }}</strong>
+                        <p>${user_input}</p>
+                        <div class="timestamp">${getCurrentTime()}</div>
+                    </div>
+                </div>`);
+              $("#chat-messages").scrollTop(
+                $("#chat-messages")[0].scrollHeight
+              );
+            },
+            success: function (response) {
+              if (response.status === "success") {
+                $("#chat-messages").append(`
+                  <div class="message bot">
+                      <div>
+                          <strong>${response.messages[1].role}</strong>
+                          <p>${response.messages[1].content}</p>
+                          <div class="timestamp">${
+                            response.messages[1].timestamp || getCurrentTime()
+                          }</div>
+                      </div>
+                  </div>
+              `);
+                $("#chat-messages").scrollTop(
+                  $("#chat-messages")[0].scrollHeight
+                );
+              } else {
+                $("#error-message")
+                  .text("Error: " + response.message)
+                  .show();
+              }
+            },
+            error: function (xhr, errmsg, err) {
+              $("#error-message")
+                .text("AJAX Error: " + errmsg)
+                .show();
+            },
+            complete: function () {
+              $("#user_input").prop("disabled", false);
+              $("#submit_btn").prop("disabled", false);
+              $("#loader").hide();
+            },
+          });
+        });
+      });
+    </script>
+  </body>
+</html>
