@@ -87,7 +87,11 @@
 
         <form id="dataForm">
           {% csrf_token %}
-          <div class="form-group mb-4">
+          <div class="form-group my-2">
+            <label for="file">Upload DOCX File:</label>
+            <input type="file" id="file" name="file" accept=".docx" />
+          </div>
+          <div class="form-group mb-2">
             <label for="dataTextarea">Enter your data:</label>
             <textarea
               class="form-control"
@@ -130,10 +134,7 @@
       </div>
     </div>
 
-    <!-- jQuery -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-
-    <!-- Bootstrap JS -->
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.bundle.min.js"></script>
 
     <script>
@@ -144,7 +145,34 @@
           $("#successMsg").hide();
           $("#errorMsg").hide();
 
-          // Show loading spinner and disable form
+          var textData = $("#dataTextarea").val().trim();
+          var fileData = $("#file")[0].files[0];
+
+          if (!textData && !fileData) {
+            $("#errorMsg")
+              .text("Please provide either text data or upload a .docx file.")
+              .show();
+            return;
+          }
+
+          if (
+            fileData &&
+            fileData.type !==
+              "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+          ) {
+            $("#errorMsg").text("Only .docx files are allowed.").show();
+            return;
+          }
+
+          var formData = new FormData();
+          if (textData) {
+            formData.append("data", textData);
+          }
+          if (fileData) {
+            formData.append("file", fileData);
+          }
+          formData.append("csrfmiddlewaretoken", "{{ csrf_token }}");
+
           $("#processingMsg").show();
           $("#loadingSpinner").show();
           $("#submitBtn").prop("disabled", true);
@@ -152,12 +180,17 @@
           $.ajax({
             type: "POST",
             url: "",
-            data: $(this).serialize(),
+            data: formData,
+            processData: false,
+            contentType: false,
             success: function (response) {
               $("#processingMsg").hide();
               $("#loadingSpinner").hide();
               $("#submitBtn").prop("disabled", false);
 
+              $("#dataTextarea").val("");
+                $("#file").val("");
+                
               if (response.status === "success") {
                 $("#successMsg").text(response.message).show();
               } else {
