@@ -1,5 +1,6 @@
 import os
 from docx import Document
+import re
 
 
 def save_uploaded_file(file):
@@ -40,7 +41,13 @@ def extract_headings_and_chunks(doc_path):
     if current_heading:
         chunks.append(f'{current_heading}\n\n{" ".join(current_chunk)}')
 
-    return chunks
+    cleaned_chunks = []
+
+    for chunk in chunks:
+        cleaned_chunk = remove_references(chunk)
+        cleaned_chunks.append(cleaned_chunk)
+
+    return cleaned_chunks
 
 
 def is_heading(paragraph, heading_font_sizes):
@@ -59,3 +66,8 @@ def get_font_size(paragraph):
         if font_size:
             return font_size.pt
     return None
+
+
+def remove_references(text):
+    """Removes numbers surrounded by parentheses from the text."""
+    return re.sub(r'\(\d+\)', '', text)
