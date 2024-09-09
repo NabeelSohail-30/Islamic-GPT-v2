@@ -20,10 +20,17 @@ def add_data_view(request):
         if text:
             try:
                 document = Document(page_content=text, metadata={
-                    "title": "User Input Data"})
+                    "title": "Wuzu Ki Sunnatien"})
                 documents = [document]
 
                 config.vectorstore.add_documents(documents=documents)
+
+                # vector = config.embeddings.embed_query(text)
+
+                # config.es.index(index=config.index_name, body={
+                #     'chunk_text': text,
+                #     'vector': vector
+                # })
 
                 return JsonResponse({"status": "success", "message": "Data saved and vectorized successfully!"})
 
