@@ -51,6 +51,3 @@ coverage.xml
 .mypy_cache/
 .dmypy.json
 dmypy.json
-
-# config file
-config.py
