@@ -21,7 +21,7 @@ def chat(request):
             bot_message = OpenAiMessage.objects.create(
                 user=request.user, role='bot', content=response)
 
-            Messages.objects.create(
+            Messages.objects.create( 
                 query=user_input,
                 response=response
             )

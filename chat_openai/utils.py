@@ -1,10 +1,8 @@
 from langchain_huggingface.embeddings import HuggingFaceEmbeddings
-from langchain_pinecone import PineconeVectorStore
-from pinecone import Pinecone
 import tiktoken
 from dotenv import load_dotenv
 import os
-from openai import OpenAI
+import openai
 import config
 
 
@@ -13,96 +11,142 @@ def calculate_tokens(text):
     return len(tokens)
 
 
-def generate_prompt_with_content(query, contents, max_tokens=4096):
-    # prompt_template = f"""
-    # You are an Islamic assistant. You have to answer the user's query accurately from the given content as per the user query.
-    # You are restricted to answer the query from the given content and cannot generate new content on your own.
-
-    # - Understand the user query carefully and generate the answer as an Islamic scholar from DawateIslami based on the provided content.
-    # - If the query is in Urdu, answer in Urdu only.
-    # - If the query is in English, answer in Urdu only.
-    # - If the query is in a different language, answer in Urdu only.
-    # - If the query is a greeting, reply to the greeting accordingly as an Islamic Scholar with Hadith.
-    # - If the answer to the user query is not in the given content you have to answer i don't know, you are strictly restricted to answer the query from the given content and cannot generate from your own.
-    # - All answers should be from Bahar-e-Shariat Book.
-
-    # Query: {query} (Answer from the given Content i.e Bahar-e-Shariat Volume 01 only !!!!)
-    # """
-
+def generate_prompt_with_content(query, contents, max_tokens=12000):
     prompt_template = f"""
-    You are an Islamic assistant. Answer the user's query based only on the provided content. You must not generate new information and must only use the content given below.
+    You are an Islamic assistant. Your role is to provide precise answers to the user's query based solely on the content provided below. You must not create or infer new information; use only the information provided.
 
     Instructions:
-    - Understand the user's query and provide an answer *only* from the provided content.
-    - Always answer in Urdu Language.
-    - If the *exact answer* to the query is present in the provided content, respond with that specific answer *without adding or inferring any information*.
-    - If the answer is not present in the provided content or is unclear, respond with "I don't know."
+    - Carefully read and understand the user's query.
+    - Respond using only the content given below.
+    - If the answer to the query is directly found in the content, provide that exact answer without modification.
+    - Ensure that all responses are in Urdu.
+    - Avoid adding any additional context or information outside of the provided content.
+    - Maintain a respectful and accurate tone that aligns with Islamic teachings.
+    - Atleast provide the answer from the content against the query of about 200 to 500 words
 
     Query: {query}
 
-    Answer from the following content only (Bahar-e-Shariat Volume 01):
+    Content : {contents}
     """
 
-    content_tokens = 0
-    included_contents = []
-
-    for i, content in enumerate(contents):
-        temp_prompt = prompt_template + f"\nContent {i + 1}:\n{content}\n"
-        current_tokens = calculate_tokens(temp_prompt)
-        if current_tokens > max_tokens:
-            break
-        content_tokens = current_tokens
-        included_contents.append(f"Content {i + 1}:\n{content}")
-
-    final_prompt = prompt_template + "\n".join(included_contents)
-    return final_prompt, content_tokens
+    final_prompt = prompt_template
+    return final_prompt
 
 
-def similarity_search(query, k=5):
-    query_vector = config.embeddings.embed_query(query)
+def search_documents(query, k=1):
+    try:
+        query = query
 
-    search_query = {
-        "size": k,
-        "query": {
-            "script_score": {
-                "query": {"match_all": {}},
-                "script": {
-                    "source": "cosineSimilarity(params.query_vector, 'vector') + 1.0",
-                    "params": {"query_vector": query_vector}
+        search_query = {
+            "size": k,
+            "_source": ["paragraph", "questions"],
+            "query": {
+                "bool": {
+                    "should": [],
+                    "minimum_should_match": 1
                 }
             }
         }
-    }
 
-    response = config.es.search(index=config.index_name, body=search_query)
-    hits = response['hits']['hits']
+        if query:
+            search_query["query"]["bool"]["should"].append({
+                "match_phrase": {
+                    "questions": {
+                        "query": query,
+                        "analyzer": "custom_urdu_stopwords_analyzer",
+                        "boost": 4
+                    }
+                }
+            })
 
-    contents = [hit["_source"]["chunk_text"] for hit in hits]
-    return contents
+        if query:
+            search_query["query"]["bool"]["should"].append({
+                "match_phrase": {
+                    "questions": {
+                        "query": query,
+                        "boost": 3
+                    }
+                }
+            })
+
+        if query:
+            search_query["query"]["bool"]["should"].append({
+                "term": {
+                    "questions.keyword": {
+                        "value": query,
+                        "boost": 2
+                    }
+                }
+            })
+
+        if query:
+            search_query["query"]["bool"]["should"].append({
+                "match": {
+                    "questions": {
+                        "query": query,
+                        "operator": "and",
+                        "analyzer": "custom_urdu_stopwords_analyzer",
+                        "fuzziness": "AUTO",
+                        "minimum_should_match": "100%",
+                        "boost": 1.5
+                    }
+                }
+            })
+
+        if query:
+            search_query["query"]["bool"]["should"].append({
+                "match": {
+                    "questions": {
+                        "query": query,
+                        "operator": "or",
+                        "analyzer": "custom_urdu_stopwords_analyzer",
+                        "fuzziness": "AUTO",
+                        "minimum_should_match": "80%",
+                        "boost": 1
+                    }
+                }
+            })
+
+        response = config.es.search(index=config.index_name, body=search_query)
+
+        hits = response['hits']['hits']
+        results = [hit["_source"].get("paragraph", "") for hit in hits]
+
+        return results
+
+    except Exception as e:
+        return e.message
 
 
 def get_response(query):
-    results = similarity_search(query=query, k=5)
-    # contents = [result.page_content for result in results]
+    contents = search_documents(query=query)
 
-    final_prompt, token_count = generate_prompt_with_content(query, results)
+    if not contents:
+        return "مجھے اس سوال کا جواب نہیں مل سکا، براہ کرم دوسرا سوال کریں"
 
-    client = OpenAI(api_key=config.OPENAI_API_KEY)
+    final_prompt = generate_prompt_with_content(query, contents)
 
-    response = client.chat.completions.create(
-        model="gpt-3.5-turbo",
-        messages=[
-            {
-                "role": "system",
-                "content": ("You are an Islamic assistant. You must answer the user's query based solely on the provided content. "
-                            "You are restricted to using only this content. If the answer is not present in the content, respond with 'I don't know.'")
-            },
-            {
-                "role": "user",
-                "content": final_prompt
-            }
-        ]
-    )
+    try:
+        response = openai.ChatCompletion.create(
+            model=config.model_name,
+            messages=[
+                {
+                    "role": "system",
+                    "content": ("You are an Islamic assistant. Answer the user's query based only on the provided content. "
+                                "If the answer is not present, respond with 'I don't know.'")
+                },
+                {
+                    "role": "user",
+                    "content": final_prompt
+                }
+            ]
+        )
+        final_response = response['choices'][0]['message']['content'].strip()
+        return final_response
 
-    final_response = response.choices[0].message.content
-    return final_response
+    except Exception as e:
+        return "Error"
+
+
+def generate_vector(text):
+    return config.embeddings.embed_query(text)
