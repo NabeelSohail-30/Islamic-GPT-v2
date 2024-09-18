@@ -2,8 +2,18 @@ from langchain_huggingface.embeddings import HuggingFaceEmbeddings
 import tiktoken
 from dotenv import load_dotenv
 import os
-import openai
 import config
+import logging
+from openai import OpenAI
+
+
+logging.basicConfig(
+    filename='app.log',
+    filemode='a',
+    level=logging.INFO,
+    format='%(message)s',
+    encoding='utf-8'
+)
 
 
 def calculate_tokens(text):
@@ -30,11 +40,13 @@ def generate_prompt_with_content(query, contents, max_tokens=12000):
     """
 
     final_prompt = prompt_template
+    logging.error(f"Final Prompt: {final_prompt}")
     return final_prompt
 
 
 def search_documents(query, k=1):
     try:
+        logging.info(f"Query: {query}")
         query = query
 
         search_query = {
@@ -121,13 +133,17 @@ def search_documents(query, k=1):
 def get_response(query):
     contents = search_documents(query=query)
 
+    logging.info(f"Contents: {contents}")
+
     if not contents:
         return "مجھے اس سوال کا جواب نہیں مل سکا، براہ کرم دوسرا سوال کریں"
 
     final_prompt = generate_prompt_with_content(query, contents)
 
+    client = OpenAI(api_key=config.OPENAI_API_KEY)
+
     try:
-        response = openai.ChatCompletion.create(
+        response = client.chat.completions.create(
             model=config.model_name,
             messages=[
                 {
@@ -141,11 +157,12 @@ def get_response(query):
                 }
             ]
         )
-        final_response = response['choices'][0]['message']['content'].strip()
+        final_response = response.choices[0].message.content
         return final_response
 
     except Exception as e:
-        return "Error"
+        logging.error(f"Error calling OpenAI API: {e}")
+        return "مجھے اس سوال کا جواب نہیں مل سکا، براہ کرم دوسرا سوال کریں"
 
 
 def generate_vector(text):

@@ -13,7 +13,11 @@
   <body>
     <div class="container mt-5">
       <h2>Submit a Paragraph and Question</h2>
-      <form id="para-question-form" method="post" action="{% url '' %}">
+      <form
+        id="para-question-form"
+        method="post"
+        action="{% url 'add_data:view' %}"
+      >
         {% csrf_token %}
 
         <div class="mb-3">
